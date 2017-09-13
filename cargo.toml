@@ -1,0 +1,9 @@
+[package]
+
+name = "bflru"
+version = "0.0.1"
+authors = [ "Tristan Dannenberg <dtristan@hotmail.de>" ]
+
+[lib]
+name = "bflru"
+path = "src/cache.rs"
