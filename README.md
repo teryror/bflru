@@ -20,48 +20,23 @@ in other contexts.
 How it Works
 ============
 
-Even for small caches, using a linked list or shifting around arrays seems
-wasteful, which is why this implementation does not do that.
+We use copies to physically move the cached values around in an array. The trick
+to doing this in a branch free manner is to allocate more slots than will actually
+be filled.
 
-Instead, the four most recently used elements are stored in a flat array, with
-no guarantees made about their order. Since there are only `4!` permutations
-possible, we keep track of their conceptual order using a finite state machine.
+This technique was pointed out to me by Fabian Giesen, who in turn credits
+Charles Bloom with it.
 
-The integer representations of the individual states are chosen such that the
-two least significant bits can be used to index the unordered array to retrieve
-the most recently used element.
+Note that the practicality of this approach very much depends on the size of the
+cached type. It'll be fine for register-sized values, but for a more generalized
+technique, have a look at the history of this repository.
 
-Since retrieving any other element will make that the new most recently used
-element, we just transition to the corresponding new state before using the
-same bits.
+In a previous version, I used a finite state machine to model permutations as
+states and move-to-front operations as state transitions. I still like this
+approach, but it requires a lookup table that has to be generated first, and is
+tedious to prove correct.
 
-When inserting a new element, the least recently used one is evicted, and its
-slot reused for the new element, which is now the most recently used. Thus we
-can use the same transition as if we wanted to reuse the evicted element,
-before using the two lowest bits to determine which slot to overwrite.
-
-New states are determined from the old state and the conceptual index, using a
-constant two dimensional array, which was generated using a simple C program
-(see `tablegen.c`). Since it is 24 * 4 = 96 bytes large, it will fit in one or
-two cache lines on most modern CPUs.
-
-Alternative Cache Sizes
-=======================
-
-* If you want a two element cache, just use a boolean and roll the 'transition
-  table' by hand -- there's no need for a lookup table then!
-* If you're implementing LZX, which has a 3-element cache, or want a 5-element
-  cache for your codec, this code is pretty easy to modify for those cases.
-  It's noteworthy that you can no longer retrieve the slot index using bitwise
-  operations in these cases (at least, not without taking a penalty on the
-  table size); instead, a modulo operation is required.
-* If you want larger cache sizes, you're probably looking at the wrong library.
-  There are `n!` permutations, all of which need a state ID, and the lookup
-  table contains `n! * n` elements -- each of which needs to be large enough to
-  hold a state ID! Thus, the lookup table for an 8-element cache would be
-  almost a megabyte in size, at which point you're better off using a different
-  approach.
-* If you want arbitrary `n`, you'll have to store multiple tables, or generate
-  them at runtime. This library will _definitely_ not be useful to you.
-
-Thus, I didn't bother generalizing this code any further than it already is.
+The LUT also grows impractically fast as the cache size increases. If you reach
+a point where the copies required for the current approach become too expensive,
+a very similar FSM technique can be used, where new states are determined with
+bitwise operations, rather than a table.
