@@ -1,4 +1,4 @@
-Branch-free 4-element LRU cache for use with LZ77-style de/compressors
+Branch-free LRU caches (sizes 4, 8, 16) for use with LZ77-style de/compressors
 
 Use Cases
 =========
@@ -20,9 +20,9 @@ in other contexts.
 How it Works
 ============
 
-We use copies to physically move the cached values around in an array. The trick
-to doing this in a branch free manner is to allocate more slots than will actually
-be filled.
+In the 4-element cache, we use copies to physically move the cached values
+around in an array. The trick to doing this in a branch free manner is to
+allocate more slots than will actually be filled.
 
 This technique was pointed out to me by Fabian Giesen, who in turn credits
 Charles Bloom with it.
@@ -39,4 +39,5 @@ tedious to prove correct.
 The LUT also grows impractically fast as the cache size increases. If you reach
 a point where the copies required for the current approach become too expensive,
 a very similar FSM technique can be used, where new states are determined with
-bitwise operations, rather than a table.
+bitwise operations, rather than a table. That is the approach used for the 8-
+and 16-element versions.
